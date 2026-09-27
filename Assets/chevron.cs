@@ -15,7 +15,10 @@ public class chevron : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        sprite.enabled = aim.action.inProgress;
-        transform.up = aim.action.ReadValue<Vector2>();
+        if (aim.action.ReadValue<Vector2>() != Vector2.zero)
+        {
+            sprite.enabled = aim.action.inProgress;
+            transform.up = aim.action.ReadValue<Vector2>();
+        }
     }
 }

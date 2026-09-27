@@ -1,5 +1,5 @@
 {
-    "name": "InputSystem",
+    "name": "ShiftyControls",
     "maps": [
         {
             "name": "ActionMap",
@@ -15,13 +15,22 @@
                     "initialStateCheck": true
                 },
                 {
-                    "name": "Test",
+                    "name": "Blink",
                     "type": "Button",
                     "id": "d52646c0-2349-44d7-939a-eeda2612f363",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Sk8",
+                    "type": "Value",
+                    "id": "67c5adf5-b3c0-45b9-81fd-beabfe9785b6",
+                    "expectedControlType": "Integer",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
                 }
             ],
             "bindings": [
@@ -38,23 +47,23 @@
                 },
                 {
                     "name": "",
-                    "id": "98eaf627-eec5-4561-aa1d-854070e737e6",
-                    "path": "<Gamepad>/buttonSouth",
+                    "id": "f4df0fc1-939f-4c94-acd2-b4683c6f4713",
+                    "path": "<Gamepad>/rightShoulder",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Test",
+                    "action": "Blink",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
                 {
                     "name": "",
-                    "id": "f4df0fc1-939f-4c94-acd2-b4683c6f4713",
-                    "path": "<Keyboard>/space",
+                    "id": "90460525-c3fb-4cd6-af53-9a6a6e2b0319",
+                    "path": "<Gamepad>/leftShoulder",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Test",
+                    "action": "Sk8",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
