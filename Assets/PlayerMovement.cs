@@ -6,16 +6,23 @@ using UnityEngine.InputSystem.Interactions;
 public class PlayerMovement : MonoBehaviour
 {
     int speed = 5;
-    int slerpStrength = 5;
     Vector2 moveInput = Vector2.zero;
-    float blinkDistance = 3f;
-    bool sk8ing = false;
-    float maxSk8Velocity = 30;
-    float minSk8Velocity = 10;
 
-    bool movementLockout = false;
-    float movementLockoutStartTime = 0f;
-    float movementLockoutMinSpeed = 5f;
+    bool blinking = false;
+    float blinkSpeed = 50f;
+    float blinkDuration = 0.1f;
+    float blinkStartTime;
+
+    float blinkSk8CancelEfficiency = 0.75f;
+
+    bool sk8ing = false;
+    float maxSk8Velocity = 20;
+    float minSk8Velocity = 10;
+    int slerpStrength = 5;
+
+    bool forcedSkidding = false;
+    float forcedSkidStartTime = 0f;
+    float forcedSkidMinSpeed = 5f;
 
     [SerializeField] Rigidbody2D rb;
 
@@ -29,33 +36,50 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
+        // continue blinking?
+        if (blinking && Time.time < blinkStartTime + blinkDuration) return;
+        else
+        {
+            blinking = false;
+            if (sk8.action.inProgress && !sk8ing)
+            {
+                rb.linearVelocity = rb.linearVelocity * blinkSk8CancelEfficiency;
+                DoSk8();
+            }
+        }
+
+
+
+
+        // calculate changes in speed
         Vector2 newSpeed = Vector2.zero;
-        if (movementLockout)                newSpeed += MovementLockoutMovement();
+        if (forcedSkidding)                 newSpeed += ForcedSkidMovement();
 
         if (!sk8ing)
         {
-            if (moveInput != Vector2.zero) newSpeed += BasicAcceleration(!movementLockout ? 1 : Time.time - movementLockoutStartTime);
-            else if (!movementLockout)      newSpeed += BasicDeceleration();
+            if (moveInput != Vector2.zero)  newSpeed += BasicAcceleration(!forcedSkidding ? 1 : Time.time - forcedSkidStartTime);
+            else if (!forcedSkidding)       newSpeed += BasicDeceleration();
         }
         else                                newSpeed += Sk8Movement();
 
         rb.linearVelocity += newSpeed;
 
+
+
+
         // stop smoothly
         if (!sk8ing && rb.linearVelocity.magnitude <= 0.01)
             rb.linearVelocity = Vector2.zero;
 
-        //print(rb.linearVelocity.magnitude);
+
+        // print speed for fun
+        print(rb.linearVelocity.magnitude);
     }
     void Update()
     {
         moveInput = move.action.ReadValue<Vector2>();
     }
 
-
-    // new fixed update idea
-    // each movement method returns a vector as it's contribution to the new speed
-    // then they are added together at the end and applied to the rb
 
     Vector2 BasicAcceleration(float effectiveness = 1f)
     {
@@ -78,16 +102,22 @@ public class PlayerMovement : MonoBehaviour
 
         if (moveInput != Vector2.zero)
         {
+            // turn
             float slerpStrengthModifier = (Vector2.Dot(rb.linearVelocity.normalized, moveInput.normalized) + 2) / 2;  // slerp softer when inputting opposite direction to current momentum
             Vector2 newDir = Vector3.Slerp(rb.linearVelocity.normalized, moveInput.normalized, slerpStrength * slerpStrengthModifier * Time.fixedDeltaTime);
             newSpeed += newDir * rb.linearVelocity.magnitude;
 
+            // speed up / slow down
             if (rb.linearVelocity.magnitude < maxSk8Velocity)
             {
                 if (rb.linearVelocity.magnitude < minSk8Velocity)
                     newSpeed += moveInput.normalized * 20f * Time.fixedDeltaTime;
 
                 newSpeed += rb.linearVelocity * .25f * Time.fixedDeltaTime;
+            }
+            else
+            {
+                newSpeed -= rb.linearVelocity * .15f * Time.fixedDeltaTime;
             }
 
             newSpeed = newSpeed - rb.linearVelocity;
@@ -96,14 +126,13 @@ public class PlayerMovement : MonoBehaviour
         return newSpeed;
     }
 
-    Vector2 MovementLockoutMovement()
+    Vector2 ForcedSkidMovement()
     {
-        movementLockout = rb.linearVelocity.magnitude > movementLockoutMinSpeed;
+        forcedSkidding = rb.linearVelocity.magnitude > forcedSkidMinSpeed;
 
-        if (!movementLockout) return Vector2.zero;
+        if (!forcedSkidding) return Vector2.zero;
 
-        float frictionStrength = 0.5f * (1 + Mathf.Clamp01(EaseOutCubic(Time.time - movementLockoutStartTime)));
-        print(frictionStrength);
+        float frictionStrength = 0.5f * (1 + Mathf.Clamp01(EaseOutCubic(Time.time - forcedSkidStartTime)));
         Vector2 newSpeed = -1f * frictionStrength * rb.linearVelocity.normalized;
 
         return newSpeed;
@@ -111,18 +140,28 @@ public class PlayerMovement : MonoBehaviour
 
 
 
-    void DoBlink(InputAction.CallbackContext ctx)
+    void DoBlinkReq(InputAction.CallbackContext ctx) => DoBlink();
+    void DoBlink()
     {
         Instantiate(ringEffect, transform.position, Quaternion.identity);
-        transform.position += (Vector3) moveInput.normalized * blinkDistance;
+        rb.linearVelocity = moveInput.normalized * blinkSpeed;
+        blinking = true;
+        blinkStartTime = Time.time;
+        
+        if (sk8ing) EndSk8();
     }
-    void DoSk8(InputAction.CallbackContext ctx)
+
+    void DoSk8Req(InputAction.CallbackContext ctx) => DoSk8();
+    void DoSk8()
     {
+        if (blinking) return;
         sk8ing = true;
         ball.SetActive(false);
         arrow.SetActive(true);
     }
-    void EndSk8(InputAction.CallbackContext ctx)
+
+    void EndSk8Req(InputAction.CallbackContext ctx) => EndSk8();
+    void EndSk8()
     {
         if (!sk8ing) return;
 
@@ -130,20 +169,20 @@ public class PlayerMovement : MonoBehaviour
         arrow.SetActive(false);
         ball.SetActive(true);
 
-        StartMovementLockout();
+        if (!blinking) StartForcedSkid();
     }
 
-    bool StartMovementLockout()
+    bool StartForcedSkid()
     {
-        movementLockoutStartTime = Time.time;
-        return movementLockout = rb.linearVelocity.magnitude > movementLockoutMinSpeed;
+        forcedSkidStartTime = Time.time;
+        return forcedSkidding = rb.linearVelocity.magnitude > forcedSkidMinSpeed;
     }
 
     private void OnEnable()
     {
-        blink.action.started += DoBlink;
-        sk8.action.started += DoSk8;
-        sk8.action.canceled += EndSk8;
+        blink.action.started += DoBlinkReq;
+        sk8.action.started += DoSk8Req;
+        sk8.action.canceled += EndSk8Req;
     }
 
     float EaseOutCubic(float x)
