@@ -190,6 +190,18 @@ public class PlayerMovement : MonoBehaviour
         return 1 - Mathf.Pow(1 - x, 3);
     }
 
-    float EaseInCubic(float x) => Mathf.Pow(x, 3);
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision == null) return;
+        
+
+        if (collision.collider.gameObject.layer == 6 || collision.collider.gameObject.layer == 7)
+        {
+            //rb.linearVelocity = Vector2.Reflect(rb.linearVelocity, collision.GetContact(0).normal);
+
+            //transform.position += (Vector3)rb.linearVelocity.normalized * 3;
+            EndSk8();
+        }
+    }
 
 }
