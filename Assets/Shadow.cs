@@ -6,8 +6,8 @@ public class Shadow : MonoBehaviour
     [SerializeField] Transform visualParent;
     [SerializeField] Transform shadowVisual;
     float size = 1;
-    [SerializeField] float minYSize = 0.2f;   // 0.2 for ball
-    [SerializeField] float minXSize = 0.2f;   // 0.2 for ball
+    [SerializeField] float minYSize = 1f;   // 1 for ball
+    [SerializeField] float minXSize = 1f;   // 1 for ball
     [SerializeField] float maxYSize = 2f;     // 2 for ball
     [SerializeField] float maxXSize = 2f;     // 2 for ball
 
