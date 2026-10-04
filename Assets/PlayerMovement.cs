@@ -31,6 +31,13 @@ public class PlayerMovement : MonoBehaviour
     float mvmtLockoutStartTime = 0f;
     float mvmtLockoutDuration = 0.5f;
 
+    float abilityLockoutMinSpeed = 0.5f;
+    bool abilityLockout = false;
+    float abilityLockoutStartTime = 0f;
+    float abilityLockoutDuration = 0.5f;
+
+    Vector3 lastFrameVelocity = Vector3.zero;
+
 
     [SerializeField] Rigidbody2D rb;
 
@@ -39,27 +46,40 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] InputActionReference sk8;
 
     [SerializeField] GameObject ringEffect;
+    [SerializeField] SpriteRenderer ballBlack;
     [SerializeField] GameObject ball;
     [SerializeField] GameObject arrow;
 
     void FixedUpdate()
     {
+        OnFixedUpdate();
+
+        lastFrameVelocity = rb.linearVelocity;
+    }
+    void Update()
+    {
+        mvmtInput = move.action.ReadValue<Vector2>();
+    }
+
+
+    void OnFixedUpdate()
+    {
+        bool lockout = mvmtLockout || abilityLockout;
         // continue movement lockout?
         if (mvmtLockout)
             mvmtLockout = Time.time < mvmtLockoutStartTime + mvmtLockoutDuration && rb.linearVelocity.magnitude > mvmtLockoutMinSpeed;
-            //mvmtLockout = Time.time < mvmtLockoutStartTime + mvmtLockoutDuration;
+        if (abilityLockout) 
+            abilityLockout = Time.time < abilityLockoutStartTime + abilityLockoutDuration && rb.linearVelocity.magnitude > abilityLockoutMinSpeed;
+            
+        if (lockout && !abilityLockout) LateSk8Check();
+
         //if (mvmtLockout) return;
 
         // continue blinking?
-        if (blinking && Time.time < blinkStartTime + blinkDuration) return;
-        else
+        if (blinking)
         {
-            blinking = false;
-            if (sk8.action.inProgress && !sk8ing)
-            {
-                rb.linearVelocity = rb.linearVelocity * blinkSk8CancelEfficiency;
-                DoSk8();
-            }
+            if (Time.time < blinkStartTime + blinkDuration && Time.time > blinkDuration) return;
+            else EndBlink();
         }
 
 
@@ -67,14 +87,14 @@ public class PlayerMovement : MonoBehaviour
 
         // calculate changes in speed
         Vector2 newSpeed = Vector2.zero;
-        if (forcedSkidding)                                 newSpeed += ForcedSkidMovement();
+        if (forcedSkidding) newSpeed += ForcedSkidMovement();
 
         if (!sk8ing)
         {
-            if (mvmtInput != Vector2.zero)                  newSpeed += BasicAcceleration(!mvmtLockout ? 1 : Time.time - mvmtLockoutStartTime);
-            else if (!mvmtLockout && !forcedSkidding)       newSpeed += BasicDeceleration();
+            if (mvmtInput != Vector2.zero) newSpeed += BasicAcceleration(!mvmtLockout ? 1 : Time.time - mvmtLockoutStartTime);
+            else if (!mvmtLockout && !forcedSkidding) newSpeed += BasicDeceleration();
         }
-        else if (!mvmtLockout && !forcedSkidding)           newSpeed += Sk8Movement();
+        else if (!mvmtLockout && !forcedSkidding) newSpeed += Sk8Movement();
 
         rb.linearVelocity += newSpeed;
 
@@ -89,15 +109,10 @@ public class PlayerMovement : MonoBehaviour
         // print speed for fun
         //print(rb.linearVelocity.magnitude);
     }
-    void Update()
-    {
-        mvmtInput = move.action.ReadValue<Vector2>();
-    }
-
 
     Vector2 BasicAcceleration(float effectiveness = 1f)
     {
-        print(effectiveness);
+        //print(effectiveness);
         Vector2 desiredSpeed = (rb.linearVelocity) * 0.25f + (speed * mvmtInput.normalized) * .75f; // acceleration
         Vector2 diff = Vector2.ClampMagnitude(desiredSpeed - rb.linearVelocity, 5f);
 
@@ -158,26 +173,44 @@ public class PlayerMovement : MonoBehaviour
     void DoBlinkReq(InputAction.CallbackContext ctx) => DoBlink();
     void DoBlink()
     {
+        if (abilityLockout) return;
         Instantiate(ringEffect, transform.position, Quaternion.identity);
         rb.linearVelocity = mvmtInput.normalized * blinkSpeed;
         blinking = true;
         blinkStartTime = Time.time;
-        
+        ballBlack.enabled = false;
+
         if (sk8ing) EndSk8(false);
     }
 
     void EndBlink()
     {
+        ballBlack.enabled = true;
         blinking = false;
+
+        if (!mvmtLockout && !sk8ing && !sk8.action.inProgress)
+        {
+            rb.linearVelocity = speed * 2 * mvmtInput.normalized;
+        }
+        else
+        {
+            rb.linearVelocity = rb.linearVelocity * blinkSk8CancelEfficiency;
+            DoSk8();
+        }
     }
 
     void DoSk8Req(InputAction.CallbackContext ctx) => DoSk8();
     void DoSk8()
     {
-        if (blinking || mvmtLockout || forcedSkidding) return;
+        if (blinking || abilityLockout) return;
         sk8ing = true;
         ball.SetActive(false);
         arrow.SetActive(true);
+    }
+
+    void LateSk8Check()
+    {
+        if (!sk8ing && sk8.action.inProgress) DoSk8();
     }
 
     void EndSk8Req(InputAction.CallbackContext ctx) => EndSk8(!blinking);
@@ -202,6 +235,11 @@ public class PlayerMovement : MonoBehaviour
         mvmtLockoutStartTime = Time.time;
         mvmtLockout = true;
     }
+    void DoAbilityLockout()
+    {
+        abilityLockoutStartTime = Time.time;
+        abilityLockout = true;
+    }
 
     private void OnEnable()
     {
@@ -222,9 +260,18 @@ public class PlayerMovement : MonoBehaviour
 
         if (collision.collider.gameObject.layer == 6 || collision.collider.gameObject.layer == 7)
         {
-            EndSk8(false);
-            EndBlink();
-            DoMvmtLockout();
+            if (blinking || sk8ing)
+            {
+                if (blinking && sk8ing)                                     Debug.LogError($"{nameof(sk8ing)} and {nameof(blinking)} were both true!");
+                else if (blinking && !(sk8ing || sk8.action.inProgress))    rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal) / 3f;
+                else if (sk8ing || sk8.action.inProgress)                   rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal);
+
+                EndSk8(false);
+                DoMvmtLockout();
+                DoAbilityLockout();
+                EndBlink();
+            }
+
         }
     }
 }
