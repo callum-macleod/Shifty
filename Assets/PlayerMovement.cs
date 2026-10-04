@@ -1,7 +1,10 @@
+using System.Drawing;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Security.Principal;
+using Unity.Burst.Intrinsics;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Assertions.Must;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Interactions;
 
@@ -15,8 +18,9 @@ public class PlayerMovement : MonoBehaviour
     float blinkSpeed = 50f;
     float blinkDuration = 0.1f;
     float blinkStartTime;
-
     float blinkSk8CancelEfficiency = 0.75f;
+    Vector2? blinkPredeterminedEndpoint;
+    float blinkOverWallGrace = 5f;  // adds a certain amount of distance onto a blink to make it go over a wall
 
     bool sk8ing = false;
     float maxSk8Velocity = 20;
@@ -47,7 +51,9 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] InputActionReference sk8;
 
     [SerializeField] GameObject ringEffect;
+    [SerializeField] SpriteRenderer ballWhite;
     [SerializeField] SpriteRenderer ballBlack;
+    [SerializeField] SpriteRenderer ballShadow;
     [SerializeField] SpriteRenderer arrowBlack;
     [SerializeField] GameObject ball;
     [SerializeField] GameObject arrow;
@@ -66,8 +72,8 @@ public class PlayerMovement : MonoBehaviour
 
     void OnFixedUpdate()
     {
-        bool lockout = mvmtLockout || abilityLockout;
         // continue movement lockout?
+        bool lockout = mvmtLockout || abilityLockout;
         if (mvmtLockout)
             mvmtLockout = Time.time < mvmtLockoutStartTime + mvmtLockoutDuration && rb.linearVelocity.magnitude > mvmtLockoutMinSpeed;
         if (abilityLockout) 
@@ -75,11 +81,11 @@ public class PlayerMovement : MonoBehaviour
             
         if (lockout && !abilityLockout) LateSk8Check();
 
-        //if (mvmtLockout) return;
 
         // continue blinking?
         if (blinking)
         {
+            if (blinkPredeterminedEndpoint != null && ((Vector2)transform.position - blinkPredeterminedEndpoint.Value).magnitude > 0.5f) return;
             if (Time.time < blinkStartTime + blinkDuration && Time.time > blinkDuration) return;
             else EndBlink();
         }
@@ -192,6 +198,28 @@ public class PlayerMovement : MonoBehaviour
         else
         {
             ballBlack.enabled = false;
+            ballShadow.enabled = false;
+
+            Vector2 p1 = (Vector2)transform.position + mvmtInput.normalized * blinkSpeed * blinkDuration;
+            Vector2[] points = new Vector2[]
+            {
+                p1,
+                p1 + 0.25f * blinkOverWallGrace * mvmtInput.normalized,
+                p1 + 0.5f * blinkOverWallGrace * mvmtInput.normalized,
+                p1 + 0.75f * blinkOverWallGrace * mvmtInput.normalized,
+            };
+
+            foreach (Vector2 point in points)
+            {
+                Collider2D collider = Physics2D.OverlapCircle(point, transform.localScale.x * 0.5f, Utils.LayerToLayerMask(Layers.Wall));
+                //Instantiate(ringEffect, point, Quaternion.identity);
+                if (collider == null)
+                {
+                    blinkPredeterminedEndpoint = point;
+                    rb.excludeLayers = 255;
+                    break;
+                }
+            }
         }
     }
 
@@ -199,6 +227,8 @@ public class PlayerMovement : MonoBehaviour
     {
         ballBlack.enabled = true;
         arrowBlack.enabled = true;
+        ballShadow.enabled = true;
+
         blinking = false;
         bool wasSk8Blinking = sk8Blinking = false;
 
@@ -210,6 +240,11 @@ public class PlayerMovement : MonoBehaviour
         {
             rb.linearVelocity = rb.linearVelocity * blinkSk8CancelEfficiency;
             if (!wasSk8Blinking) DoSk8();
+        }
+        if (blinkPredeterminedEndpoint != null)
+        {
+            blinkPredeterminedEndpoint = null;
+            rb.excludeLayers = 0;
         }
     }
 
@@ -276,7 +311,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (collision.collider.gameObject.layer == 6 || collision.collider.gameObject.layer == 7)
         {
-            if (blinking || sk8ing)
+            if ((blinking && blinkPredeterminedEndpoint == null) || sk8ing)
             {
                 if (blinking && !(sk8ing || sk8.action.inProgress))
                     rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal) / 3f;
