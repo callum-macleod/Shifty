@@ -195,7 +195,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 509981105
   m_SortingLayer: -1
-  m_SortingOrder: 1
+  m_SortingOrder: 2
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
   m_Color: {r: 0.20784314, g: 0.07450981, b: 0.16470589, a: 1}
   m_FlipX: 0
@@ -1136,7 +1136,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 509981105
   m_SortingLayer: -1
-  m_SortingOrder: 1
+  m_SortingOrder: 2
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
   m_Color: {r: 0.20784314, g: 0.07450981, b: 0.16470589, a: 1}
   m_FlipX: 0
@@ -1530,7 +1530,7 @@ TrailRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2100000, guid: 577c12a9ef3fe4d4a91cc142836b8328, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1606,8 +1606,8 @@ TrailRenderer:
       atime5: 0
       atime6: 0
       atime7: 0
-      m_Mode: 0
-      m_ColorSpace: -1
+      m_Mode: 1
+      m_ColorSpace: 0
       m_NumColorKeys: 2
       m_NumAlphaKeys: 2
     numCornerVertices: 0
@@ -2110,7 +2110,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 509981105
   m_SortingLayer: -1
-  m_SortingOrder: 1
+  m_SortingOrder: 2
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
   m_Color: {r: 0.20784314, g: 0.07450981, b: 0.16470589, a: 1}
   m_FlipX: 0
@@ -2760,6 +2760,7 @@ MonoBehaviour:
   sk8: {fileID: 97635948827815470, guid: 2741b3c8dfdd09a4086065434b2c239e, type: 3}
   ringEffect: {fileID: 4902215812957906393, guid: 98f4854581b709a4f80c25b146cd6f95, type: 3}
   ballBlack: {fileID: 2097540342}
+  arrowBlack: {fileID: 1364056712}
   ball: {fileID: 132247387}
   arrow: {fileID: 1505689611}
 --- !u!50 &1389472667
@@ -3348,7 +3349,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 509981105
   m_SortingLayer: -1
-  m_SortingOrder: 1
+  m_SortingOrder: 2
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
   m_Color: {r: 0.20784314, g: 0.07450981, b: 0.16470589, a: 1}
   m_FlipX: 0

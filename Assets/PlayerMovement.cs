@@ -11,6 +11,7 @@ public class PlayerMovement : MonoBehaviour
     Vector2 mvmtInput = Vector2.zero;
 
     bool blinking = false;
+    bool sk8Blinking = false;
     float blinkSpeed = 50f;
     float blinkDuration = 0.1f;
     float blinkStartTime;
@@ -47,6 +48,7 @@ public class PlayerMovement : MonoBehaviour
 
     [SerializeField] GameObject ringEffect;
     [SerializeField] SpriteRenderer ballBlack;
+    [SerializeField] SpriteRenderer arrowBlack;
     [SerializeField] GameObject ball;
     [SerializeField] GameObject arrow;
 
@@ -174,19 +176,31 @@ public class PlayerMovement : MonoBehaviour
     void DoBlink()
     {
         if (abilityLockout) return;
+        if (mvmtLockout) mvmtLockout = false;
+
         Instantiate(ringEffect, transform.position, Quaternion.identity);
         rb.linearVelocity = mvmtInput.normalized * blinkSpeed;
         blinking = true;
         blinkStartTime = Time.time;
-        ballBlack.enabled = false;
 
-        if (sk8ing) EndSk8(false);
+
+        if (sk8.action.inProgress)
+        {
+            sk8Blinking = true;
+            arrowBlack.enabled = false;
+        }
+        else
+        {
+            ballBlack.enabled = false;
+        }
     }
 
     void EndBlink()
     {
         ballBlack.enabled = true;
+        arrowBlack.enabled = true;
         blinking = false;
+        bool wasSk8Blinking = sk8Blinking = false;
 
         if (!mvmtLockout && !sk8ing && !sk8.action.inProgress)
         {
@@ -195,7 +209,7 @@ public class PlayerMovement : MonoBehaviour
         else
         {
             rb.linearVelocity = rb.linearVelocity * blinkSk8CancelEfficiency;
-            DoSk8();
+            if (!wasSk8Blinking) DoSk8();
         }
     }
 
@@ -203,6 +217,8 @@ public class PlayerMovement : MonoBehaviour
     void DoSk8()
     {
         if (blinking || abilityLockout) return;
+        if (mvmtLockout) mvmtLockout = false;
+
         sk8ing = true;
         ball.SetActive(false);
         arrow.SetActive(true);
@@ -262,9 +278,10 @@ public class PlayerMovement : MonoBehaviour
         {
             if (blinking || sk8ing)
             {
-                if (blinking && sk8ing)                                     Debug.LogError($"{nameof(sk8ing)} and {nameof(blinking)} were both true!");
-                else if (blinking && !(sk8ing || sk8.action.inProgress))    rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal) / 3f;
-                else if (sk8ing || sk8.action.inProgress)                   rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal);
+                if (blinking && !(sk8ing || sk8.action.inProgress))
+                    rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal) / 3f;
+                else    
+                    rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal);
 
                 EndSk8(false);
                 DoMvmtLockout();
