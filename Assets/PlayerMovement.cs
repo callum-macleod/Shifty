@@ -25,11 +25,12 @@ public class PlayerMovement : MonoBehaviour
     float blinkSk8CancelEfficiency = 0.75f;
     Vector2? blinkPredeterminedEndpoint;
     float blinkOverWallGrace = 5f;  // adds a certain amount of distance onto a blink to make it go over a wall
+    float blinkOverWallGraceSpeedScalar = .5f; // determines how much additional grace you will get based on your speed
 
     bool sk8ing = false;
     float maxSk8Velocity = 20;
-    float minSk8Velocity = 10;
-    float initialSk8Acceleration = 20f;
+    float minSk8Velocity = 18;
+    float initialSk8Acceleration = 5f;
     float regularSk8AccelerationRatio = .25f;
     float sk8DecayRate = .15f;
     int slerpStrength = 5;
@@ -85,6 +86,7 @@ public class PlayerMovement : MonoBehaviour
 
     void OnFixedUpdate()
     {
+        print(rb.linearVelocity.magnitude);
         // continue movement lockout?
         bool lockout = mvmtLockout || abilityLockout;
         if (mvmtLockout)
@@ -94,7 +96,6 @@ public class PlayerMovement : MonoBehaviour
             
         if (lockout && !abilityLockout) LateSk8Check();
 
-        print(blinking);
         // continue blinking?
         if (blinking)
         {
@@ -216,11 +217,7 @@ public class PlayerMovement : MonoBehaviour
             ballBlack.enabled = false;
             ballShadow.enabled = false;
 
-            float speedBeforeBlink = rb.linearVelocity.magnitude;
-            //float additionalGrace = (speedBeforeBlink < minSk8Velocity)
-            //                    ? 1f
-            //                    : 1 + (speedBeforeBlink - minSk8Velocity) / (maxSk8Velocity - minSk8Velocity);
-            float additionalGrace = speedBeforeBlink * 0.3f;
+            float additionalGrace = rb.linearVelocity.magnitude * blinkOverWallGraceSpeedScalar;
             float newGrace = blinkOverWallGrace + additionalGrace;
 
 
@@ -377,6 +374,7 @@ public class PlayerMovement : MonoBehaviour
         {
             if ((blinking && blinkPredeterminedEndpoint == null) || sk8ing)
             {
+                // forgive the player if they hit the wall at a shallow angle
                 if (Mathf.Abs(Vector2.Dot(lastFrameVelocity.normalized, collision.GetContact(0).normal)) < 0.75f)
                 {
                     rb.linearVelocity += collision.GetContact(0).normal * 5f;
@@ -384,10 +382,12 @@ public class PlayerMovement : MonoBehaviour
                     return;
                 }
 
+
+                // rebound and lock movement and abilities
                 if (blinking && !(sk8ing || sk8.action.inProgress))
-                    rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal) / 3f;
+                    rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal) / 3f;    // if blinking normally
                 else    
-                    rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal) / 1.5f;
+                    rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal) / 1.5f;  // if sk8ing or sk8ing + blinking
 
                 EndSk8(false);
                 DoMvmtLockout();
