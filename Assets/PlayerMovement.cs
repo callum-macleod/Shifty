@@ -24,8 +24,8 @@ public class PlayerMovement : MonoBehaviour
     float blinkStartTime;
     float blinkSk8CancelEfficiency = 0.75f;
     Vector2? blinkPredeterminedEndpoint;
-    float blinkOverWallGrace = 5f;  // adds a certain amount of distance onto a blink to make it go over a wall
-    float blinkOverWallGraceSpeedScalar = .5f; // determines how much additional grace you will get based on your speed
+    float defaultBlinkGrace = 5f;  // adds a certain amount of distance onto a blink to make it go over a wall
+    float additionalBlinkGrace = 4f; // determines how much additional grace you will get based on your speed
 
     bool sk8ing = false;
     float maxSk8Velocity = 20;
@@ -217,8 +217,10 @@ public class PlayerMovement : MonoBehaviour
             ballBlack.enabled = false;
             ballShadow.enabled = false;
 
-            float additionalGrace = rb.linearVelocity.magnitude * blinkOverWallGraceSpeedScalar;
-            float newGrace = blinkOverWallGrace + additionalGrace;
+            float additionalGrace = (rb.linearVelocity.magnitude > minSk8Velocity)
+                                ? additionalBlinkGrace
+                                : 0f;
+            float newGrace = defaultBlinkGrace + additionalGrace;
 
 
             Vector2 p1 = (Vector2)transform.position + mvmtInput.normalized * defaultBlinkSpeed * blinkDuration;
