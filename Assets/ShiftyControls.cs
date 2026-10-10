@@ -111,12 +111,21 @@ public partial class @ShiftyControls: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": ""Sk8"",
-                    ""type"": ""Value"",
+                    ""type"": ""Button"",
                     ""id"": ""67c5adf5-b3c0-45b9-81fd-beabfe9785b6"",
-                    ""expectedControlType"": ""Integer"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""Forward"",
+                    ""type"": ""Button"",
+                    ""id"": ""3efc5d9e-f40f-4d45-b704-4192442b4882"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -144,12 +153,45 @@ public partial class @ShiftyControls: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
+                    ""id"": ""34be9e2f-82a6-4414-a677-bd52dfc51b3c"",
+                    ""path"": ""<Keyboard>/space"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Blink"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
                     ""id"": ""90460525-c3fb-4cd6-af53-9a6a6e2b0319"",
                     ""path"": ""<Gamepad>/leftShoulder"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Sk8"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""0ace3e3d-3121-482d-b7ca-da2d757202dc"",
+                    ""path"": ""<Keyboard>/shift"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Sk8"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""46c4393a-33ba-49d5-80ae-e7a21b24269b"",
+                    ""path"": ""<Mouse>/rightButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Forward"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -163,6 +205,7 @@ public partial class @ShiftyControls: IInputActionCollection2, IDisposable
         m_ActionMap_Move = m_ActionMap.FindAction("Move", throwIfNotFound: true);
         m_ActionMap_Blink = m_ActionMap.FindAction("Blink", throwIfNotFound: true);
         m_ActionMap_Sk8 = m_ActionMap.FindAction("Sk8", throwIfNotFound: true);
+        m_ActionMap_Forward = m_ActionMap.FindAction("Forward", throwIfNotFound: true);
     }
 
     ~@ShiftyControls()
@@ -246,6 +289,7 @@ public partial class @ShiftyControls: IInputActionCollection2, IDisposable
     private readonly InputAction m_ActionMap_Move;
     private readonly InputAction m_ActionMap_Blink;
     private readonly InputAction m_ActionMap_Sk8;
+    private readonly InputAction m_ActionMap_Forward;
     /// <summary>
     /// Provides access to input actions defined in input action map "ActionMap".
     /// </summary>
@@ -269,6 +313,10 @@ public partial class @ShiftyControls: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "ActionMap/Sk8".
         /// </summary>
         public InputAction @Sk8 => m_Wrapper.m_ActionMap_Sk8;
+        /// <summary>
+        /// Provides access to the underlying input action "ActionMap/Forward".
+        /// </summary>
+        public InputAction @Forward => m_Wrapper.m_ActionMap_Forward;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -304,6 +352,9 @@ public partial class @ShiftyControls: IInputActionCollection2, IDisposable
             @Sk8.started += instance.OnSk8;
             @Sk8.performed += instance.OnSk8;
             @Sk8.canceled += instance.OnSk8;
+            @Forward.started += instance.OnForward;
+            @Forward.performed += instance.OnForward;
+            @Forward.canceled += instance.OnForward;
         }
 
         /// <summary>
@@ -324,6 +375,9 @@ public partial class @ShiftyControls: IInputActionCollection2, IDisposable
             @Sk8.started -= instance.OnSk8;
             @Sk8.performed -= instance.OnSk8;
             @Sk8.canceled -= instance.OnSk8;
+            @Forward.started -= instance.OnForward;
+            @Forward.performed -= instance.OnForward;
+            @Forward.canceled -= instance.OnForward;
         }
 
         /// <summary>
@@ -385,5 +439,12 @@ public partial class @ShiftyControls: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnSk8(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Forward" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnForward(InputAction.CallbackContext context);
     }
 }

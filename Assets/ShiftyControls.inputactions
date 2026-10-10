@@ -25,12 +25,21 @@
                 },
                 {
                     "name": "Sk8",
-                    "type": "Value",
+                    "type": "Button",
                     "id": "67c5adf5-b3c0-45b9-81fd-beabfe9785b6",
-                    "expectedControlType": "Integer",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
+                },
+                {
+                    "name": "Forward",
+                    "type": "Button",
+                    "id": "3efc5d9e-f40f-4d45-b704-4192442b4882",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -58,12 +67,45 @@
                 },
                 {
                     "name": "",
+                    "id": "34be9e2f-82a6-4414-a677-bd52dfc51b3c",
+                    "path": "<Keyboard>/space",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Blink",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "90460525-c3fb-4cd6-af53-9a6a6e2b0319",
                     "path": "<Gamepad>/leftShoulder",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
                     "action": "Sk8",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "0ace3e3d-3121-482d-b7ca-da2d757202dc",
+                    "path": "<Keyboard>/shift",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Sk8",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "46c4393a-33ba-49d5-80ae-e7a21b24269b",
+                    "path": "<Mouse>/rightButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Forward",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

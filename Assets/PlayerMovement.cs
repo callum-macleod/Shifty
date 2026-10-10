@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Security.Principal;
 using Unity.Burst.Intrinsics;
@@ -7,6 +9,7 @@ using UnityEngine;
 using UnityEngine.Assertions.Must;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Interactions;
+using UnityEngine.Rendering;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -15,7 +18,8 @@ public class PlayerMovement : MonoBehaviour
 
     bool blinking = false;
     bool sk8Blinking = false;
-    float blinkSpeed = 50f;
+    readonly float defaultBlinkSpeed = 60f;  // basic blink speed
+    float? actualBlinkSpeed;                 // the speed that gets recalculated at runtime
     float blinkDuration = 0.1f;
     float blinkStartTime;
     float blinkSk8CancelEfficiency = 0.75f;
@@ -25,6 +29,9 @@ public class PlayerMovement : MonoBehaviour
     bool sk8ing = false;
     float maxSk8Velocity = 20;
     float minSk8Velocity = 10;
+    float initialSk8Acceleration = 20f;
+    float regularSk8AccelerationRatio = .25f;
+    float sk8DecayRate = .15f;
     int slerpStrength = 5;
 
     bool forcedSkidding = false;
@@ -43,10 +50,13 @@ public class PlayerMovement : MonoBehaviour
 
     Vector3 lastFrameVelocity = Vector3.zero;
 
+    bool mouseControls = false;
+
 
     [SerializeField] Rigidbody2D rb;
 
     [SerializeField] InputActionReference move;
+    [SerializeField] InputActionReference keyboardForward;
     [SerializeField] InputActionReference blink;
     [SerializeField] InputActionReference sk8;
 
@@ -60,13 +70,16 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (mouseControls && !keyboardForward.action.inProgress) mvmtInput = Vector2.zero;
         OnFixedUpdate();
 
         lastFrameVelocity = rb.linearVelocity;
     }
     void Update()
     {
-        mvmtInput = move.action.ReadValue<Vector2>();
+        mvmtInput = (mouseControls)
+            ? (Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.position).normalized
+            : move.action.ReadValue<Vector2>();
     }
 
 
@@ -81,13 +94,12 @@ public class PlayerMovement : MonoBehaviour
             
         if (lockout && !abilityLockout) LateSk8Check();
 
-
+        print(blinking);
         // continue blinking?
         if (blinking)
         {
-            if (blinkPredeterminedEndpoint != null && ((Vector2)transform.position - blinkPredeterminedEndpoint.Value).magnitude > 0.5f) return;
-            if (Time.time < blinkStartTime + blinkDuration && Time.time > blinkDuration) return;
-            else EndBlink();
+            if (Time.time < blinkStartTime + blinkDuration && Time.time > blinkDuration) return; // assumes blink always has the same duration (which atm is the case)
+            EndBlink();
         }
 
 
@@ -149,13 +161,13 @@ public class PlayerMovement : MonoBehaviour
             if (rb.linearVelocity.magnitude < maxSk8Velocity)
             {
                 if (rb.linearVelocity.magnitude < minSk8Velocity)
-                    newSpeed += mvmtInput.normalized * 20f * Time.fixedDeltaTime;
+                    newSpeed += mvmtInput.normalized * initialSk8Acceleration * Time.fixedDeltaTime;
 
-                newSpeed += rb.linearVelocity * .25f * Time.fixedDeltaTime;
+                newSpeed += rb.linearVelocity * regularSk8AccelerationRatio * Time.fixedDeltaTime;
             }
             else
             {
-                newSpeed -= rb.linearVelocity * .15f * Time.fixedDeltaTime;
+                newSpeed -= rb.linearVelocity * sk8DecayRate * Time.fixedDeltaTime;
             }
 
             newSpeed = newSpeed - rb.linearVelocity;
@@ -184,10 +196,14 @@ public class PlayerMovement : MonoBehaviour
         if (abilityLockout) return;
         if (mvmtLockout) mvmtLockout = false;
 
-        Instantiate(ringEffect, transform.position, Quaternion.identity);
-        rb.linearVelocity = mvmtInput.normalized * blinkSpeed;
-        blinking = true;
-        blinkStartTime = Time.time;
+        //float speedBeforeBlink = rb.linearVelocity.magnitude;
+        //float additionalGrace = speedBeforeBlink * 0.15f;
+        //float newGrace = blinkOverWallGrace + additionalGrace;
+
+        //print(additionalGrace);
+
+        blinkPredeterminedEndpoint = null;
+
 
 
         if (sk8.action.inProgress)
@@ -200,31 +216,76 @@ public class PlayerMovement : MonoBehaviour
             ballBlack.enabled = false;
             ballShadow.enabled = false;
 
-            Vector2 p1 = (Vector2)transform.position + mvmtInput.normalized * blinkSpeed * blinkDuration;
-            Vector2[] points = new Vector2[]
+            float speedBeforeBlink = rb.linearVelocity.magnitude;
+            //float additionalGrace = (speedBeforeBlink < minSk8Velocity)
+            //                    ? 1f
+            //                    : 1 + (speedBeforeBlink - minSk8Velocity) / (maxSk8Velocity - minSk8Velocity);
+            float additionalGrace = speedBeforeBlink * 0.3f;
+            float newGrace = blinkOverWallGrace + additionalGrace;
+
+
+            Vector2 p1 = (Vector2)transform.position + mvmtInput.normalized * defaultBlinkSpeed * blinkDuration;
+            Vector2[] potentialPoints = new Vector2[]
             {
                 p1,
-                p1 + 0.25f * blinkOverWallGrace * mvmtInput.normalized,
-                p1 + 0.5f * blinkOverWallGrace * mvmtInput.normalized,
-                p1 + 0.75f * blinkOverWallGrace * mvmtInput.normalized,
+                p1 + (0.25f * newGrace) * mvmtInput.normalized,
+                p1 + (0.5f * newGrace) * mvmtInput.normalized,
+                p1 + (0.75f * newGrace) * mvmtInput.normalized,
             };
+            List<Vector2> validPoints = new List<Vector2> { };
 
-            foreach (Vector2 point in points)
+            // try a bunch of potential blink points
+            foreach (Vector2 point in potentialPoints)
             {
                 Collider2D collider = Physics2D.OverlapCircle(point, transform.localScale.x * 0.5f, Utils.LayerToLayerMask(Layers.Wall));
                 //Instantiate(ringEffect, point, Quaternion.identity);
-                if (collider == null)
+                if (collider == null) validPoints.Add(point);
+            }
+
+
+            // see if there's a wall between the player pos and the furthes valid blink point
+            if (validPoints.Count > 0)
+            {
+                Vector2 pos = transform.position;
+                Vector2 last = validPoints.Last();
+                Vector2 lastToPos = pos - last;
+                RaycastHit2D hit = Physics2D.Raycast(last, lastToPos, lastToPos.magnitude, Utils.LayerToLayerMask(Layers.Wall));
+                if (hit.collider != null)
                 {
-                    blinkPredeterminedEndpoint = point;
-                    rb.excludeLayers = 255;
-                    break;
+                    if ((hit.point - pos).magnitude > (p1 - pos).magnitude)
+                        blinkPredeterminedEndpoint = hit.point;
+                    else
+                        blinkPredeterminedEndpoint = p1;
+
+                    blinkPredeterminedEndpoint += mvmtInput.normalized * transform.localScale.x * 1f;
                 }
             }
+
+            //Instantiate(ringEffect, points.Last(), Quaternion.identity);
         }
+
+        // if blinking over a wall
+        if (blinkPredeterminedEndpoint.HasValue)
+        {
+            float distance = (blinkPredeterminedEndpoint.Value - (Vector2)transform.position).magnitude;
+            actualBlinkSpeed = distance / blinkDuration;
+            rb.excludeLayers = 255;
+        }
+        else
+        {
+            actualBlinkSpeed = defaultBlinkSpeed;
+        }
+
+        rb.linearVelocity = mvmtInput.normalized * actualBlinkSpeed.Value;
+        blinking = true;
+        blinkStartTime = Time.time;
+        Instantiate(ringEffect, transform.position, Quaternion.identity);
     }
 
     void EndBlink()
     {
+        if (!blinking) return;
+
         ballBlack.enabled = true;
         arrowBlack.enabled = true;
         ballShadow.enabled = true;
@@ -238,9 +299,12 @@ public class PlayerMovement : MonoBehaviour
         }
         else
         {
-            rb.linearVelocity = rb.linearVelocity * blinkSk8CancelEfficiency;
+            float clampedSpeed = Mathf.Clamp(rb.linearVelocity.magnitude, 0, defaultBlinkSpeed);  // if speed > defaultSpeed, clamp
+
+            rb.linearVelocity = rb.linearVelocity.normalized * clampedSpeed * blinkSk8CancelEfficiency;
             if (!wasSk8Blinking) DoSk8();
         }
+
         if (blinkPredeterminedEndpoint != null)
         {
             blinkPredeterminedEndpoint = null;
@@ -313,10 +377,17 @@ public class PlayerMovement : MonoBehaviour
         {
             if ((blinking && blinkPredeterminedEndpoint == null) || sk8ing)
             {
+                if (Mathf.Abs(Vector2.Dot(lastFrameVelocity.normalized, collision.GetContact(0).normal)) < 0.75f)
+                {
+                    rb.linearVelocity += collision.GetContact(0).normal * 5f;
+                    transform.position += (Vector3)collision.GetContact(0).normal * 0.25f;
+                    return;
+                }
+
                 if (blinking && !(sk8ing || sk8.action.inProgress))
                     rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal) / 3f;
                 else    
-                    rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal);
+                    rb.linearVelocity = Vector3.Reflect(lastFrameVelocity, collision.GetContact(0).normal) / 1.5f;
 
                 EndSk8(false);
                 DoMvmtLockout();
