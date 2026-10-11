@@ -14,7 +14,7 @@ using UnityEngine.Rendering;
 public class PlayerMovement : MonoBehaviour
 {
     int speed = 5;
-    Vector2 mvmtInput = Vector2.zero;
+    public Vector2 MvmtInput { get; private set; } = Vector2.zero;
 
     bool blinking = false;
     bool sk8Blinking = false;
@@ -52,7 +52,9 @@ public class PlayerMovement : MonoBehaviour
 
     Vector3 lastFrameVelocity = Vector3.zero;
 
-    bool mouseControls = false;
+    public bool MouseControls = false;
+    float mouseSensitivity = 13f;
+    public Vector2 AimState { get; private set; } = Vector2.zero;
 
 
     [SerializeField] Rigidbody2D rb;
@@ -72,16 +74,35 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (mouseControls && !keyboardForward.action.inProgress) mvmtInput = Vector2.zero;
+        if (MouseControls)
+        {
+            MvmtInput = keyboardForward.action.inProgress
+                ? AimState.normalized
+                : Vector2.zero;
+        }
+        else
+        {
+            MvmtInput = move.action.ReadValue<Vector2>();
+        }
+
         OnFixedUpdate();
 
         lastFrameVelocity = rb.linearVelocity;
     }
     void Update()
     {
-        mvmtInput = (mouseControls)
-            ? (Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.position).normalized
-            : move.action.ReadValue<Vector2>();
+        if (MouseControls)
+        {
+            Vector2 mouseMov = Vector2.ClampMagnitude(new(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")), mouseSensitivity * Time.deltaTime);
+            AimState = Vector2.ClampMagnitude(AimState + mouseMov, 1);
+        }
+        else
+        {
+            MvmtInput = move.action.ReadValue<Vector2>();
+        }
+
+
+        if (Input.GetKeyDown(KeyCode.CapsLock)) MouseControls = !MouseControls;
     }
 
 
@@ -112,7 +133,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (!sk8ing)
         {
-            if (mvmtInput != Vector2.zero) newSpeed += BasicAcceleration(!mvmtLockout ? 1 : Time.time - mvmtLockoutStartTime);
+            if (MvmtInput != Vector2.zero) newSpeed += BasicAcceleration(!mvmtLockout ? 1 : Time.time - mvmtLockoutStartTime);
             else if (!mvmtLockout && !forcedSkidding) newSpeed += BasicDeceleration();
         }
         else if (!mvmtLockout && !forcedSkidding) newSpeed += Sk8Movement();
@@ -134,7 +155,7 @@ public class PlayerMovement : MonoBehaviour
     Vector2 BasicAcceleration(float effectiveness = 1f)
     {
         //print(effectiveness);
-        Vector2 desiredSpeed = (rb.linearVelocity) * 0.25f + (speed * mvmtInput.normalized) * .75f; // acceleration
+        Vector2 desiredSpeed = (rb.linearVelocity) * 0.25f + (speed * MvmtInput.normalized) * .75f; // acceleration
         Vector2 diff = Vector2.ClampMagnitude(desiredSpeed - rb.linearVelocity, 5f);
 
         return diff * effectiveness;
@@ -151,18 +172,18 @@ public class PlayerMovement : MonoBehaviour
     {
         Vector2 newSpeed = Vector2.zero;
 
-        if (mvmtInput != Vector2.zero)
+        if (MvmtInput != Vector2.zero)
         {
             // turn
-            float slerpStrengthModifier = (Vector2.Dot(rb.linearVelocity.normalized, mvmtInput.normalized) + 2) / 2;  // slerp softer when inputting opposite direction to current momentum
-            Vector2 newDir = Vector3.Slerp(rb.linearVelocity.normalized, mvmtInput.normalized, slerpStrength * slerpStrengthModifier * Time.fixedDeltaTime);
+            float slerpStrengthModifier = (Vector2.Dot(rb.linearVelocity.normalized, MvmtInput.normalized) + 2) / 2;  // slerp softer when inputting opposite direction to current momentum
+            Vector2 newDir = Vector3.Slerp(rb.linearVelocity.normalized, MvmtInput.normalized, slerpStrength * slerpStrengthModifier * Time.fixedDeltaTime);
             newSpeed += newDir * rb.linearVelocity.magnitude;
 
             // speed up / slow down
             if (rb.linearVelocity.magnitude < maxSk8Velocity)
             {
                 if (rb.linearVelocity.magnitude < minSk8Velocity)
-                    newSpeed += mvmtInput.normalized * initialSk8Acceleration * Time.fixedDeltaTime;
+                    newSpeed += MvmtInput.normalized * initialSk8Acceleration * Time.fixedDeltaTime;
 
                 newSpeed += rb.linearVelocity * regularSk8AccelerationRatio * Time.fixedDeltaTime;
             }
@@ -223,13 +244,13 @@ public class PlayerMovement : MonoBehaviour
             float newGrace = defaultBlinkGrace + additionalGrace;
 
 
-            Vector2 p1 = (Vector2)transform.position + mvmtInput.normalized * defaultBlinkSpeed * blinkDuration;
+            Vector2 p1 = (Vector2)transform.position + MvmtInput.normalized * defaultBlinkSpeed * blinkDuration;
             Vector2[] potentialPoints = new Vector2[]
             {
                 p1,
-                p1 + (0.25f * newGrace) * mvmtInput.normalized,
-                p1 + (0.5f * newGrace) * mvmtInput.normalized,
-                p1 + (0.75f * newGrace) * mvmtInput.normalized,
+                p1 + (0.25f * newGrace) * MvmtInput.normalized,
+                p1 + (0.5f * newGrace) * MvmtInput.normalized,
+                p1 + (0.75f * newGrace) * MvmtInput.normalized,
             };
             List<Vector2> validPoints = new List<Vector2> { };
 
@@ -256,7 +277,7 @@ public class PlayerMovement : MonoBehaviour
                     else
                         blinkPredeterminedEndpoint = p1;
 
-                    blinkPredeterminedEndpoint += mvmtInput.normalized * transform.localScale.x * 1f;
+                    blinkPredeterminedEndpoint += MvmtInput.normalized * transform.localScale.x * 1f;
                 }
             }
 
@@ -275,7 +296,7 @@ public class PlayerMovement : MonoBehaviour
             actualBlinkSpeed = defaultBlinkSpeed;
         }
 
-        rb.linearVelocity = mvmtInput.normalized * actualBlinkSpeed.Value;
+        rb.linearVelocity = MvmtInput.normalized * actualBlinkSpeed.Value;
         blinking = true;
         blinkStartTime = Time.time;
         Instantiate(ringEffect, transform.position, Quaternion.identity);
@@ -294,7 +315,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (!mvmtLockout && !sk8ing && !sk8.action.inProgress)
         {
-            rb.linearVelocity = speed * 2 * mvmtInput.normalized;
+            rb.linearVelocity = speed * 2 * MvmtInput.normalized;
         }
         else
         {
@@ -328,9 +349,11 @@ public class PlayerMovement : MonoBehaviour
         ball.SetActive(false);
         arrow.SetActive(true);
 
-        if (Time.time < blinkStartTime + blinkDuration + blink2Sk8CoyoteTime)
+        if (Time.time < blinkStartTime + blinkDuration + blink2Sk8CoyoteTime    // coyote time
+            && Time.time > blinkDuration + blink2Sk8CoyoteTime)                 // make sure it's not just the beginning of game
             ConserveBlinkMomentum(defaultBlinkSpeed);
-        else if (Time.time < blinkStartTime + blinkDuration + blink2Sk8CoyoteTime * 2f)
+        else if (Time.time < blinkStartTime + blinkDuration + blink2Sk8CoyoteTime * 2f
+                && Time.time > blinkDuration + blink2Sk8CoyoteTime)             // make sure it's not just the beginning of game
         {
             print($"{Time.time} HALF");
             ConserveBlinkMomentum(defaultBlinkSpeed * 0.5f);
