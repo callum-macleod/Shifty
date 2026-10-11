@@ -27,6 +27,7 @@ public class PlayerMovement : MonoBehaviour
     float defaultBlinkGrace = 5f;  // adds a certain amount of distance onto a blink to make it go over a wall
     float additionalBlinkGrace = 4f; // determines how much additional grace you will get based on your speed
 
+    float blink2Sk8CoyoteTime = 0.1f;
     bool sk8ing = false;
     float maxSk8Velocity = 20;
     float minSk8Velocity = 18;
@@ -86,7 +87,6 @@ public class PlayerMovement : MonoBehaviour
 
     void OnFixedUpdate()
     {
-        print(rb.linearVelocity.magnitude);
         // continue movement lockout?
         bool lockout = mvmtLockout || abilityLockout;
         if (mvmtLockout)
@@ -298,9 +298,7 @@ public class PlayerMovement : MonoBehaviour
         }
         else
         {
-            float clampedSpeed = Mathf.Clamp(rb.linearVelocity.magnitude, 0, defaultBlinkSpeed);  // if speed > defaultSpeed, clamp
-
-            rb.linearVelocity = rb.linearVelocity.normalized * clampedSpeed * blinkSk8CancelEfficiency;
+            ConserveBlinkMomentum();
             if (!wasSk8Blinking) DoSk8();
         }
 
@@ -309,6 +307,15 @@ public class PlayerMovement : MonoBehaviour
             blinkPredeterminedEndpoint = null;
             rb.excludeLayers = 0;
         }
+    }
+
+    void ConserveBlinkMomentum(float? resetVelocity = null)
+    {
+        if (resetVelocity.HasValue) rb.linearVelocity = rb.linearVelocity.normalized * resetVelocity.Value;
+
+        float clampedSpeed = Mathf.Clamp(rb.linearVelocity.magnitude, 0, defaultBlinkSpeed);  // if speed > defaultSpeed, clamp
+
+        rb.linearVelocity = rb.linearVelocity.normalized * clampedSpeed * blinkSk8CancelEfficiency;
     }
 
     void DoSk8Req(InputAction.CallbackContext ctx) => DoSk8();
@@ -320,6 +327,14 @@ public class PlayerMovement : MonoBehaviour
         sk8ing = true;
         ball.SetActive(false);
         arrow.SetActive(true);
+
+        if (Time.time < blinkStartTime + blinkDuration + blink2Sk8CoyoteTime)
+            ConserveBlinkMomentum(defaultBlinkSpeed);
+        else if (Time.time < blinkStartTime + blinkDuration + blink2Sk8CoyoteTime * 2f)
+        {
+            print($"{Time.time} HALF");
+            ConserveBlinkMomentum(defaultBlinkSpeed * 0.5f);
+        }
     }
 
     void LateSk8Check()
