@@ -53,7 +53,7 @@ public class PlayerMovement : MonoBehaviour
     Vector3 lastFrameVelocity = Vector3.zero;
 
     public bool MouseControls = false;
-    float mouseSensitivity = 13f;
+    public float MouseSensitivity = 13f;
     public Vector2 AimState { get; private set; } = Vector2.zero;
 
 
@@ -93,7 +93,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (MouseControls)
         {
-            Vector2 mouseMov = Vector2.ClampMagnitude(new(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")), mouseSensitivity * Time.deltaTime);
+            Vector2 mouseMov = Vector2.ClampMagnitude(new(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")), MouseSensitivity * Time.deltaTime);
             AimState = Vector2.ClampMagnitude(AimState + mouseMov, 1);
         }
         else
@@ -102,7 +102,10 @@ public class PlayerMovement : MonoBehaviour
         }
 
 
-        if (Input.GetKeyDown(KeyCode.CapsLock)) MouseControls = !MouseControls;
+        //if (Input.GetKeyDown(KeyCode.CapsLock)) MouseControls = !MouseControls;
+        if (Input.GetKeyDown(KeyCode.Escape)) Cursor.lockState = (Cursor.lockState == CursorLockMode.Locked)
+                                                                ? CursorLockMode.Confined
+                                                                : CursorLockMode.Locked;
     }
 
 

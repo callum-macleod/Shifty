@@ -24,7 +24,7 @@ public class chevron : MonoBehaviour
         {
             transform.up = player.AimState;
             sprite.transform.localPosition = new Vector3(0, player.AimState.magnitude * visualMaxDistance, 0);
-            print(player.AimState.magnitude * visualMaxDistance);
+            //print(player.AimState.magnitude * visualMaxDistance);
         }
         else if (aim.action.ReadValue<Vector2>() != Vector2.zero)
         {
