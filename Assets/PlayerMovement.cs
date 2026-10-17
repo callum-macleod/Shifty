@@ -93,7 +93,8 @@ public class PlayerMovement : MonoBehaviour
     {
         if (MouseControls)
         {
-            Vector2 mouseMov = Vector2.ClampMagnitude(new(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")), MouseSensitivity * Time.deltaTime);
+            Vector2 mouseMov = new Vector2 (Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")) * MouseSensitivity * Time.deltaTime;
+            //Vector2 mouseMov = Vector2.ClampMagnitude(new(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")), MouseSensitivity * Time.deltaTime);
             AimState = Vector2.ClampMagnitude(AimState + mouseMov, 1);
         }
         else
