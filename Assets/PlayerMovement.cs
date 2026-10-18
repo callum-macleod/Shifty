@@ -22,15 +22,15 @@ public class PlayerMovement : MonoBehaviour
     float? actualBlinkSpeed;                 // the speed that gets recalculated at runtime
     float blinkDuration = 0.1f;
     float blinkStartTime;
-    float blinkSk8CancelEfficiency = 0.75f;
+    float blinkSk8CancelEfficiency = 0.65f;
     Vector2? blinkPredeterminedEndpoint;
     float defaultBlinkGrace = 5f;  // adds a certain amount of distance onto a blink to make it go over a wall
     float additionalBlinkGrace = 4f; // determines how much additional grace you will get based on your speed
 
     float blink2Sk8CoyoteTime = 0.1f;
     bool sk8ing = false;
-    float maxSk8Velocity = 20;
-    float minSk8Velocity = 18;
+    float maxSk8Velocity = 16;
+    float minSk8Velocity = 14;
     float initialSk8Acceleration = 5f;
     float regularSk8AccelerationRatio = .25f;
     float sk8DecayRate = .15f;
