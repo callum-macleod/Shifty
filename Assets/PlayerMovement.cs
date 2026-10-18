@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -10,11 +11,14 @@ using UnityEngine.Assertions.Must;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Interactions;
 using UnityEngine.Rendering;
+using static UnityEngine.EventSystems.EventTrigger;
 
 public class PlayerMovement : MonoBehaviour
 {
     int speed = 5;
     public Vector2 MvmtInput { get; private set; } = Vector2.zero;
+
+    [SerializeField] EnergyMeter energyMeter;
 
     bool blinking = false;
     bool sk8Blinking = false;
@@ -26,6 +30,7 @@ public class PlayerMovement : MonoBehaviour
     Vector2? blinkPredeterminedEndpoint;
     float defaultBlinkGrace = 5f;  // adds a certain amount of distance onto a blink to make it go over a wall
     float additionalBlinkGrace = 4f; // determines how much additional grace you will get based on your speed
+    float blinkCost = 0.5f;
 
     float blink2Sk8CoyoteTime = 0.1f;
     bool sk8ing = false;
@@ -128,7 +133,17 @@ public class PlayerMovement : MonoBehaviour
             EndBlink();
         }
 
-
+        if (sk8ing)
+        {
+            bool energyToSk8 = energyMeter.ExpendSk8();
+            if (!energyToSk8) EndSk8();
+        }
+        
+        // can't be "else", because if (sk8ing) can set sk8ing = false
+        if (!sk8ing)
+        {
+            energyMeter.RegenEnergy();
+        }
 
 
         // calculate changes in speed
@@ -222,14 +237,11 @@ public class PlayerMovement : MonoBehaviour
         if (abilityLockout) return;
         if (mvmtLockout) mvmtLockout = false;
 
-        //float speedBeforeBlink = rb.linearVelocity.magnitude;
-        //float additionalGrace = speedBeforeBlink * 0.15f;
-        //float newGrace = blinkOverWallGrace + additionalGrace;
+        bool blinkSuccess = energyMeter.TryBlink();
+        if (!blinkSuccess) return;
 
-        //print(additionalGrace);
 
         blinkPredeterminedEndpoint = null;
-
 
 
         if (sk8.action.inProgress)
@@ -346,7 +358,7 @@ public class PlayerMovement : MonoBehaviour
     void DoSk8Req(InputAction.CallbackContext ctx) => DoSk8();
     void DoSk8()
     {
-        if (blinking || abilityLockout) return;
+        if (blinking || abilityLockout || !energyMeter.CanStartSk8()) return;
         if (mvmtLockout) mvmtLockout = false;
 
         sk8ing = true;

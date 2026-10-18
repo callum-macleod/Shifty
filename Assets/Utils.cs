@@ -7,6 +7,12 @@ public enum Layers
     Enemy = 7,
 }
 
+public enum Ablities
+{
+    Blink = 0,
+    Sk8,
+}
+
 public class Utils
 {
     public static int LayerToLayerMask(int layer)
