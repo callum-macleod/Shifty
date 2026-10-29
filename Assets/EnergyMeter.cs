@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,6 +13,12 @@ public class EnergyMeter : MonoBehaviour
     float blinkCost = 0.3f;
     float sk8Cost = 0.1f;
     float minEnergyToStartSk8 = 0.1f;
+
+    float currentDuration = float.MaxValue;
+    float blinkCooldown = 1f;
+    int blinkCharges = 2;
+    [SerializeField] Image blinkMeter;
+
 
     // Start is called before the first frame update
     void Start()
@@ -25,7 +33,30 @@ public class EnergyMeter : MonoBehaviour
         {
             GetComponent<Image>().fillAmount = Energy;
         }
+
+        TickBlinkCd();
+
+        blinkMeter.fillAmount = 0.5f * (blinkCharges + currentDuration);
+        print(blinkCharges);
     }
+
+    void TickBlinkCd()
+    {
+        if (blinkCharges < 2)
+        {
+            if (currentDuration > blinkCooldown)
+                blinkCharges++;
+            else
+            {
+                currentDuration += Time.deltaTime;
+                return;
+            }
+
+            if (blinkCharges < 2)  // if still < 2, start another cooldown
+                currentDuration = 0;
+        }
+    }
+
 
     public void RegenEnergy()
     {
@@ -35,9 +66,12 @@ public class EnergyMeter : MonoBehaviour
 
     public bool TryBlink()
     {
-        if (Energy >= blinkCost)
+        if (blinkCharges > 0)
         {
-            Energy -= blinkCost;
+            blinkCharges--;
+            if (currentDuration >= blinkCooldown) // start cooldown if there isn't already one
+                currentDuration = 0;
+
             return true;
         }
 
